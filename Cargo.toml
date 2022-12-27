@@ -24,3 +24,8 @@ dotenv = "0.15"
 redis = { version = "0.22", features = ["tokio-comp", "tokio-native-tls-comp"]}
 async-lock = "2"
 thiserror = "1"
+lazy_static = "1"
+futures-util = "0.3.25"
+form_urlencoded = "1.1"
+chrono = "0.4"
+secp256k1 = { version = "0.25", features = ["bitcoin_hashes", "global-context", "rand-std"] }
