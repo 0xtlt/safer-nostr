@@ -1,0 +1,23 @@
+[package]
+name = "safer-nostr"
+version = "0.1.0"
+edition = "2021"
+description = "Safer Nostr is a service to delegate the loading of information such as PIN 05, and images (as well as their optimizations) in order to allow Nostr users to be safe"
+readme = "README.md"
+repository = "https://github.com/0xtlt/nostr_rust"
+keywords = ["nostr", "rust", "delegate", "nip05", "image", "optimization"]
+license = "MIT"
+authors = ["Thomas Tastet"]
+
+[features]
+default = []
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+tokio = { version = "1.23", features = ["macros", "rt-multi-thread"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls-webpki-roots"] }
+tokio-tungstenite = { version = "0.18", features = ["handshake", "rustls-tls-webpki-roots"] }
+actix-web = "4"
+serde = { version = "1.0", features = ["derive", "serde_derive"] }
+nostr_rust = { version = "0.16", default-features = false, features = ["async"] }
+dotenv = "0.15.0"
