@@ -1,5 +1,5 @@
-use super::cache::{Cache, DEFAULT_CACHE_TTL, SECURITY_SIG_CACHE_TTL};
-use crate::{CACHE, RESTRICTED_PUBKEYS};
+use super::cache::SECURITY_SIG_CACHE_TTL;
+use crate::RESTRICTED_PUBKEYS;
 use secp256k1::{schnorr::Signature, XOnlyPublicKey, SECP256K1};
 use std::str::FromStr;
 use thiserror::Error;
@@ -10,15 +10,14 @@ pub enum SigError {
     SignatureError(#[from] secp256k1::Error),
 }
 
-pub fn verify_sig(content: &str, pubkey: &str, sig: &str) -> Result<(), SigError> {
-    let message =
-        secp256k1::Message::from_hashed_data::<secp256k1::hashes::sha256::Hash>(content.as_bytes());
+pub fn verify_sig(sig: &str, pubkey: &str, message: &str) -> Result<(), SigError> {
+    let sig = Signature::from_str(sig)?;
+    let pubkey = XOnlyPublicKey::from_str(pubkey)?;
+    let message: secp256k1::Message =
+        secp256k1::Message::from_hashed_data::<secp256k1::hashes::sha256::Hash>(message.as_bytes());
 
-    SECP256K1.verify_schnorr(
-        &Signature::from_str(sig)?,
-        &message,
-        &XOnlyPublicKey::from_str(pubkey)?,
-    )?;
+    SECP256K1.verify_schnorr(&sig, &message, &pubkey)?;
+
     Ok(())
 }
 
@@ -45,6 +44,7 @@ pub fn verify_sig(content: &str, pubkey: &str, sig: &str) -> Result<(), SigError
 /// - The signature must be valid
 /// - The signature must be not used before
 pub async fn check_access(
+    cache: &super::cache::Cache,
     pubkey: Option<&String>,
     sig: Option<&String>,
     time: Option<&String>,
@@ -55,6 +55,7 @@ pub async fn check_access(
     }
 
     if pubkey.is_none() || sig.is_none() || time.is_none() || uniq.is_none() {
+        println!("Invalid request");
         return false;
     }
 
@@ -65,6 +66,7 @@ pub async fn check_access(
 
     // Check if the pubkey is in the RESTRICTED_PUBKEYS list
     if !RESTRICTED_PUBKEYS.contains(pubkey) {
+        println!("Invalid pubkey: {pubkey}");
         return false;
     }
 
@@ -73,23 +75,24 @@ pub async fn check_access(
     let current_time = chrono::Utc::now().timestamp();
 
     if (time_of_request - current_time).abs() > SECURITY_SIG_CACHE_TTL as i64 {
+        println!("Invalid time: {time}");
         return false;
     }
 
-    // Check if the signature is valid
-    let message = format!("{pubkey}:{time}:{uniq}");
-    if verify_sig(&message, pubkey, sig).is_err() {
+    if verify_sig(sig, pubkey, &format!("{pubkey}:{time}:{uniq}")).is_err() {
+        println!("Invalid signature");
         return false;
     }
 
     // Check if the signature is not used before
     let key = format!("sig:{pubkey}:{time}:{uniq}");
-    if CACHE.to_owned().get_str(&key).await.is_ok() {
+    if cache.to_owned().get_str(&key).await.is_ok() {
         return false;
     }
 
     // Set the signature to be used
-    CACHE
+    cache
+        .to_owned()
         .to_owned()
         .set_str(&key, "1", SECURITY_SIG_CACHE_TTL)
         .await

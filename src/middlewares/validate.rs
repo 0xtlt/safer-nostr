@@ -1,4 +1,4 @@
-use crate::systems::url::parse_query_string;
+use crate::{systems::url::parse_query_string, WebStates};
 use actix_web::{
     dev::{self, Service, ServiceRequest, ServiceResponse, Transform},
     Error, HttpResponse,
@@ -50,7 +50,10 @@ where
         let svc = self.service.clone();
 
         Box::pin(async move {
+            let state = req.app_data::<actix_web::web::Data<WebStates>>().unwrap();
+
             if crate::systems::security::check_access(
+                &state.cache,
                 search_params.get("pubkey"),
                 search_params.get("sig"),
                 search_params.get("time"),

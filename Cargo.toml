@@ -29,3 +29,5 @@ futures-util = "0.3.25"
 form_urlencoded = "1.1"
 chrono = "0.4"
 secp256k1 = { version = "0.25", features = ["bitcoin_hashes", "global-context", "rand-std"] }
+sha256 = "1"
+hex = "0.4"
