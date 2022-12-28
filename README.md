@@ -1,2 +1,14 @@
 # safer-nostr
-Safer Nostr is a service to delegate the loading of information such as PIN 05, and images (as well as their optimizations) in order to allow Nostr users to be safe
+
+Safer Nostr is a service that helps protect users by loading sensitive information (IP leak) and using AI to prevent inappropriate images from being uploaded. It also offers image optimization and storage options. It has configurable privacy and storage settings, as well as custom cache expiration.
+
+## Key features
+
+- [ ] Load NIP-05
+- [ ] Load and optimize images
+  - [ ] Option to store images in an S3 bucket or locally
+  - [ ] Artificial intelligence checks for inappropriate images
+- [ ] Configurable settings
+  - [ ] Private or public mode
+  - [ ] RAM or Redis storage options
+  - [ ] Custom cache expiration time
