@@ -4,7 +4,7 @@ Safer Nostr is a service that helps protect users by loading sensitive informati
 
 ## Key features
 
-- [ ] Load NIP-05
+- [x] Load NIP-05
 - [ ] Load website preview
 - [ ] Load and optimize images
   - [ ] Option to store images in an S3 bucket or locally
