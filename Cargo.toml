@@ -31,3 +31,4 @@ chrono = "0.4"
 secp256k1 = { version = "0.25", features = ["bitcoin_hashes", "global-context", "rand-std"] }
 sha256 = "1"
 hex = "0.4"
+serde_json = "1.0.91"

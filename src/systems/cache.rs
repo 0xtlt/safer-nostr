@@ -40,6 +40,8 @@ impl Cache {
         value: &str,
         expiration: usize,
     ) -> Result<(), CacheError> {
+        println!("Set cache key: {key}");
+
         let mut connection = self.connection.lock().await;
         connection.set(key, value).await?;
         connection.expire(key, expiration).await?; // Set the expiration time to 300 seconds (5 minutes)

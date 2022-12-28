@@ -10,7 +10,10 @@ mod middlewares;
 mod systems;
 
 lazy_static! {
-    static ref CACHE_TTL: u64 = std::env::var("CACHE_TTL").unwrap().parse::<u64>().unwrap();
+    static ref CACHE_TTL: usize = std::env::var("CACHE_TTL")
+        .unwrap()
+        .parse::<usize>()
+        .unwrap();
     static ref RESTRICTED_PUBKEYS: Vec<String> = std::env::var("RESTRICTED_PUBKEYS")
         .unwrap()
         .split(',')
