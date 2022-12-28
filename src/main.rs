@@ -15,9 +15,10 @@ lazy_static! {
         .parse::<usize>()
         .unwrap();
     static ref RESTRICTED_PUBKEYS: Vec<String> = std::env::var("RESTRICTED_PUBKEYS")
-        .unwrap()
+        .unwrap_or(String::new())
         .split(',')
         .map(|s| s.to_string())
+        .filter(|s| !s.is_empty())
         .collect();
 }
 
@@ -42,6 +43,7 @@ async fn main() -> std::io::Result<()> {
             .route("/", web::get().to(handlers::index::get))
             .wrap(crate::middlewares::validate::Validate)
             .route("/nip05", web::get().to(handlers::nip05::get))
+            .route("/image_proxy", web::get().to(handlers::image_proxy::get))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
