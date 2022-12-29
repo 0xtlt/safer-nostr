@@ -3,8 +3,6 @@ use redis::AsyncCommands;
 use std::{io::Write, sync::Arc};
 use thiserror::Error;
 
-use crate::MEDIA_CACHE;
-
 pub static DEFAULT_CACHE_TTL: usize = 300;
 pub static MEDIA_CACHE_TTL: usize = 3600;
 pub static SECURITY_SIG_CACHE_TTL: usize = 300;
@@ -83,7 +81,7 @@ pub fn normalize_file_name(url: &str) -> String {
 
 pub async fn set_media_cache(file_name: &str, content: Vec<u8>, cache: &Cache) {
     use crate::MediaCacheType::*;
-    match MEDIA_CACHE.to_owned() {
+    match crate::ENV_CONFIG.images_cache_type.to_owned() {
         Redis => {
             let cache_key = format!("media_media:{}", file_name);
 
@@ -92,13 +90,14 @@ pub async fn set_media_cache(file_name: &str, content: Vec<u8>, cache: &Cache) {
                 .await
                 .unwrap();
         }
-        DiskDir(folder_path) => {
-            let mut file_path = std::path::PathBuf::from(folder_path);
-            file_path.push(normalize_file_name(file_name));
+        RAM => todo!(),
+        // DiskDir(folder_path) => {
+        //     let mut file_path = std::path::PathBuf::from(folder_path);
+        //     file_path.push(normalize_file_name(file_name));
 
-            let mut file = std::fs::File::create(file_path).unwrap();
-            file.write_all(&content).unwrap();
-        }
+        //     let mut file = std::fs::File::create(file_path).unwrap();
+        //     file.write_all(&content).unwrap();
+        // }
         S3 {
             bucket,
             region,
@@ -110,7 +109,7 @@ pub async fn set_media_cache(file_name: &str, content: Vec<u8>, cache: &Cache) {
 
 pub async fn get_media_cache(file_name: &str, cache: &Cache) -> Option<(Vec<u8>, String)> {
     use crate::MediaCacheType::*;
-    match MEDIA_CACHE.to_owned() {
+    match crate::ENV_CONFIG.images_cache_type.to_owned() {
         Redis => {
             let cache_key = format!("media_media:{file_name}");
 
@@ -129,20 +128,21 @@ pub async fn get_media_cache(file_name: &str, cache: &Cache) -> Option<(Vec<u8>,
                 None
             }
         }
-        DiskDir(folder_path) => {
-            let mut file_path = std::path::PathBuf::from(folder_path);
-            file_path.push(normalize_file_name(file_name));
-            if file_path.exists() {
-                let content = std::fs::read(&file_path).unwrap();
-                let mime_type = mime_guess::from_path(file_path)
-                    .first_or_octet_stream()
-                    .to_string();
+        RAM => todo!(),
+        // DiskDir(folder_path) => {
+        //     let mut file_path = std::path::PathBuf::from(folder_path);
+        //     file_path.push(normalize_file_name(file_name));
+        //     if file_path.exists() {
+        //         let content = std::fs::read(&file_path).unwrap();
+        //         let mime_type = mime_guess::from_path(file_path)
+        //             .first_or_octet_stream()
+        //             .to_string();
 
-                Some((content, mime_type))
-            } else {
-                None
-            }
-        }
+        //         Some((content, mime_type))
+        //     } else {
+        //         None
+        //     }
+        // }
         S3 {
             bucket,
             region,

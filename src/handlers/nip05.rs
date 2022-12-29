@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::{WebStates, CACHE_TTL};
+use crate::WebStates;
 
 #[derive(Deserialize)]
 pub struct Info {
@@ -40,7 +40,11 @@ pub async fn get(info: web::Query<Info>, data: web::Data<WebStates>) -> impl Res
 
     data.cache
         .to_owned()
-        .set_str(&cache_key, &body_response.to_string(), CACHE_TTL.to_owned())
+        .set_str(
+            &cache_key,
+            &body_response.to_string(),
+            crate::ENV_CONFIG.cache_ttl_nip05.to_owned(),
+        )
         .await
         .unwrap();
 

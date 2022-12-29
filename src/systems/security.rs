@@ -1,5 +1,4 @@
 use super::cache::SECURITY_SIG_CACHE_TTL;
-use crate::RESTRICTED_PUBKEYS;
 use secp256k1::{schnorr::Signature, XOnlyPublicKey, SECP256K1};
 use std::str::FromStr;
 use thiserror::Error;
@@ -50,7 +49,7 @@ pub async fn check_access(
     time: Option<&String>,
     uniq: Option<&String>,
 ) -> bool {
-    if RESTRICTED_PUBKEYS.is_empty() {
+    if crate::ENV_CONFIG.restricted_pubkeys.is_empty() {
         return true;
     }
 
@@ -65,7 +64,7 @@ pub async fn check_access(
     let uniq = uniq.unwrap();
 
     // Check if the pubkey is in the RESTRICTED_PUBKEYS list
-    if !RESTRICTED_PUBKEYS.contains(pubkey) {
+    if !crate::ENV_CONFIG.restricted_pubkeys.contains(pubkey) {
         println!("Invalid pubkey: {pubkey}");
         return false;
     }

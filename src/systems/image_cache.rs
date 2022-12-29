@@ -1,13 +1,9 @@
-use actix_web::{web, HttpResponse, Responder};
 use image::ImageFormat;
 use serde::Deserialize;
 use std::io::Cursor;
 use thiserror::Error;
 
-use crate::{
-    systems::cache::{get_media_cache, set_media_cache},
-    WebStates, IMAGE_CONFIG,
-};
+use crate::systems::cache::{get_media_cache, set_media_cache};
 
 use super::cache::Cache;
 
@@ -126,11 +122,12 @@ pub async fn cache_image(
     let body_response = response.bytes().await.unwrap();
 
     // First size check
-    if params.width.is_some() && params.width.unwrap() > IMAGE_CONFIG.max_width as f64 {
+    if params.width.is_some() && params.width.unwrap() > crate::ENV_CONFIG.image_max_width as f64 {
         return Err(ImageCacheError::WidthTooLarge);
     }
 
-    if params.height.is_some() && params.height.unwrap() > IMAGE_CONFIG.max_height as f64 {
+    if params.height.is_some() && params.height.unwrap() > crate::ENV_CONFIG.image_max_height as f64
+    {
         return Err(ImageCacheError::HeightTooLarge);
     }
 
@@ -152,7 +149,8 @@ pub async fn cache_image(
             .unwrap();
 
         // Second size check
-        if new_width > IMAGE_CONFIG.max_width as u32 || new_height > IMAGE_CONFIG.max_height as u32
+        if new_width > crate::ENV_CONFIG.image_max_width as u32
+            || new_height > crate::ENV_CONFIG.image_max_height as u32
         {
             return Err(ImageCacheError::SizeTooLargeAfterRatio);
         }

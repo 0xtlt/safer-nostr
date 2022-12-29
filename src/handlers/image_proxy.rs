@@ -1,15 +1,10 @@
 use actix_web::{web, HttpResponse, Responder};
-use image::ImageFormat;
 use serde::Deserialize;
-use std::io::Cursor;
 use thiserror::Error;
 
 use crate::{
-    systems::{
-        cache::{get_media_cache, set_media_cache},
-        image_cache::{self, Info},
-    },
-    WebStates, IMAGE_CONFIG,
+    systems::image_cache::{self, Info},
+    WebStates,
 };
 
 #[derive(Debug, Deserialize, Error)]

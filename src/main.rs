@@ -1,15 +1,19 @@
 use actix_web::{web, App, HttpServer};
 use lazy_static::lazy_static;
+use strum::EnumString;
 use systems::cache;
 
 mod handlers;
 mod middlewares;
 mod systems;
 
-#[derive(Clone)]
+#[derive(Clone, EnumString)]
 pub enum MediaCacheType {
+    #[strum(ascii_case_insensitive)]
     Redis,
-    DiskDir(String),
+    #[strum(ascii_case_insensitive)]
+    RAM,
+    #[strum(ascii_case_insensitive)]
     S3 {
         bucket: String,
         region: String,
@@ -23,41 +27,92 @@ pub struct ImageConfig {
     pub max_height: usize,
 }
 
+#[derive(EnumString)]
+pub enum RestrictedImages {
+    #[strum(ascii_case_insensitive)]
+    NSFW,
+}
+
+#[derive(EnumString)]
+pub enum DynamicCacheType {
+    #[strum(ascii_case_insensitive)]
+    REDIS,
+    #[strum(ascii_case_insensitive)]
+    RAM,
+}
+
+pub struct EnvConfig {
+    // DYNAMIC_CACHE_TYPE = "redis" | "ram"
+    pub dynamic_cache_type: DynamicCacheType,
+    pub redis_url: Option<String>,
+    // RAM_LIMIT_OBJECTS
+    pub ram_limit_objects: usize,
+    // IMAGES_CACHE_TYPE
+    pub images_cache_type: MediaCacheType,
+    // IMAGE_MAX_WIDTH
+    pub image_max_width: usize,
+    // IMAGE_MAX_HEIGHT
+    pub image_max_height: usize,
+    // RESTRICTED_PUBKEYS
+    pub restricted_pubkeys: Vec<String>,
+    // RESTRICTED_IMAGES
+    pub restricted_images: Vec<RestrictedImages>,
+    // CACHE_TTL_NIP05
+    pub cache_ttl_nip05: usize,
+    // CACHE_TTL_IMAGES
+    pub cache_ttl_images: usize,
+    // CACHE_TTL_WEBPREVIEW
+    pub cache_ttl_webpreview: usize,
+}
+
 lazy_static! {
-    static ref IMAGE_CONFIG: ImageConfig = ImageConfig {
-        max_width: std::env::var("IMAGE_MAX_WIDTH")
+    static ref ENV_CONFIG: EnvConfig = EnvConfig {
+        dynamic_cache_type: std::env::var("DYNAMIC_CACHE_TYPE")
+            .unwrap_or("redis".to_string())
+            .parse()
+            .expect("DYNAMIC_CACHE_TYPE must be 'redis' or 'ram'"),
+        redis_url: std::env::var("REDIS_URL").ok(),
+        ram_limit_objects: std::env::var("RAM_LIMIT_OBJECTS")
+            .unwrap_or("100000".to_string())
+            .parse()
+            .expect("RAM_LIMIT_OBJECTS must be a number"),
+        images_cache_type: std::env::var("IMAGES_CACHE_TYPE")
+            .unwrap_or("redis".to_string())
+            .parse()
+            .expect("IMAGES_CACHE_TYPE must be 'redis' or 'ram' or 's3'"),
+        image_max_width: std::env::var("IMAGE_MAX_WIDTH")
             .unwrap_or("2000".to_string())
             .parse()
-            .unwrap(),
-        max_height: std::env::var("IMAGE_MAX_HEIGHT")
+            .expect("IMAGE_MAX_WIDTH must be a number"),
+        image_max_height: std::env::var("IMAGE_MAX_HEIGHT")
             .unwrap_or("2000".to_string())
             .parse()
-            .unwrap(),
+            .expect("IMAGE_MAX_HEIGHT must be a number"),
+        restricted_pubkeys: std::env::var("RESTRICTED_PUBKEYS")
+            .unwrap_or(String::new())
+            .split(',')
+            .map(|s| s.to_string())
+            .filter(|s| !s.is_empty())
+            .collect(),
+        restricted_images: std::env::var("RESTRICTED_IMAGES")
+            .unwrap_or(String::new())
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse().expect("RESTRICTED_IMAGES must be 'nsfw'"))
+            .collect(),
+        cache_ttl_nip05: std::env::var("CACHE_TTL_NIP05")
+            .unwrap_or("3600".to_string())
+            .parse()
+            .expect("CACHE_TTL_NIP05 must be a number"),
+        cache_ttl_images: std::env::var("CACHE_TTL_IMAGES")
+            .unwrap_or("3600".to_string())
+            .parse()
+            .expect("CACHE_TTL_IMAGES must be a number"),
+        cache_ttl_webpreview: std::env::var("CACHE_TTL_WEBPREVIEW")
+            .unwrap_or("3600".to_string())
+            .parse()
+            .expect("CACHE_TTL_WEBPREVIEW must be a number"),
     };
-    static ref MEDIA_CACHE: MediaCacheType = {
-        if std::env::var("REDIS_IMAGE").is_ok() {
-            MediaCacheType::Redis
-        } else if let Ok(dir) = std::env::var("DISK_IMAGE_DIR") {
-            MediaCacheType::DiskDir(dir)
-        } else {
-            MediaCacheType::S3 {
-                bucket: std::env::var("S3_BUCKET").unwrap(),
-                region: std::env::var("S3_REGION").unwrap(),
-                access_key: std::env::var("S3_ACCESS_KEY").unwrap(),
-                secret_key: std::env::var("S3_SECRET_KEY").unwrap(),
-            }
-        }
-    };
-    static ref CACHE_TTL: usize = std::env::var("CACHE_TTL")
-        .unwrap()
-        .parse::<usize>()
-        .unwrap();
-    static ref RESTRICTED_PUBKEYS: Vec<String> = std::env::var("RESTRICTED_PUBKEYS")
-        .unwrap_or(String::new())
-        .split(',')
-        .map(|s| s.to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
 }
 
 pub struct WebStates {
