@@ -83,6 +83,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(crate::middlewares::validate::Validate)
             .route("/nip05", web::get().to(handlers::nip05::get))
             .route("/image_proxy", web::get().to(handlers::image_proxy::get))
+            .route(
+                "/website_preview",
+                web::get().to(handlers::website_previews::get),
+            )
     })
     .bind(("127.0.0.1", 8080))?
     .run()
