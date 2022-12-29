@@ -25,6 +25,10 @@ Safer Nostr is a service that helps protect users by loading sensitive informati
 
 ### GET /nip05
 
+| Parameter | Type | Description | Example | Is required? |
+| --- | --- | --- | --- | --- |
+| nip05 | string | NIP-05 to load | _@0xtlt.dev | yes |
+
 Coming...
 
 ### GET /image_proxy
