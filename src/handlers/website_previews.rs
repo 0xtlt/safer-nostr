@@ -27,5 +27,7 @@ pub async fn get(info: web::Query<Info>, data: web::Data<crate::WebStates>) -> i
         }
     };
 
-    HttpResponse::Ok().content_type("application/json").body(og)
+    HttpResponse::Ok()
+        .content_type("application/json; charset=utf-8")
+        .body(og)
 }
