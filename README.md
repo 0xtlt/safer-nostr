@@ -20,3 +20,17 @@ Safer Nostr is a service that helps protect users by loading sensitive informati
   - [x] RAM or Redis storage options
   - [x] Custom cache expiration time
   - [ ] Bitcoin or Lightning Bitcoin payment 1 time or recurrent to be in the allowlist
+
+## API's
+
+### GET /nip05
+
+Coming...
+
+### GET /image_proxy
+
+Coming...
+
+### GET /website_preview
+
+Coming...
