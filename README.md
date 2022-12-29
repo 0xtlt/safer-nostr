@@ -44,8 +44,7 @@ Example with Authentification required: `https://example.com/nip05?nip05=_@nostr
 | --- | --- | --- | --- | --- |
 | nip05 | string | NIP-05 to load | `_@nostr.0xtlt.dev` | yes |
 
-
-#### Response type
+Response type:
 
 ```ts
 type NIP05Response = {
@@ -60,8 +59,33 @@ type NIP05Response = {
 
 ### GET /image_proxy
 
-Coming...
+Example without Authentification required: `https://example.com/image_proxy?url=https://example.com/image.png&width=800&ratio=16:9`
+Example with Authentification required: `https://example.com/image_proxy?url=https://example.com/image.png&width=800&ratio=16:9&pubkey=884704bd421721e292edbff42eb77547fe115c6ff9825b08fc366be4cd69e9f6&uniq=20&time=1600000000&sig=0ae1feeb6fb36f3f5f5d3f001b06a5f6d01c999d7a74b9227012cdac0587f1ef7b9ed4b5e16afd3f1f502266f0b3b2ed21906554d6e4ffba43de2bb99d061694`
+
+| Parameter | Type | Description | Example | Is required? |
+| --- | --- | --- | --- | --- |
+| url | string | URL of the image to load | `https://example.com/image.png` | yes |
+| width | number | Width of the image | `100` | no |
+| height | number | Height of the image | `100` | no |
+| ratio | string | Ratio of the image | `1:1` | no |
+
+Response type: An image
 
 ### GET /website_preview
 
-Coming...
+Example without Authentification required: `https://example.com/website_preview?url=https://example.com`
+Example with Authentification required: `https://example.com/website_preview?url=https://example.com&pubkey=884704bd421721e292edbff42eb77547fe115c6ff9825b08fc366be4cd69e9f6&uniq=20&time=1600000000&sig=0ae1feeb6fb36f3f5f5d3f001b06a5f6d01c999d7a74b9227012cdac0587f1ef7b9ed4b5e16afd3f1f502266f0b3b2ed21906554d6e4ffba43de2bb99d061694`
+
+| Parameter | Type | Description | Example | Is required? |
+| --- | --- | --- | --- | --- |
+| url | string | URL of the website to load | `https://example.com` | yes |
+
+Response type:
+
+```ts
+type WebsitePreviewResponse = {
+  title: string;
+  description: string;
+  image: string;
+}
+```
