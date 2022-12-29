@@ -1,16 +1,15 @@
 use async_lock::Mutex;
 use redis::AsyncCommands;
-use std::{io::Write, sync::Arc};
+use std::sync::Arc;
 use thiserror::Error;
-
-pub static DEFAULT_CACHE_TTL: usize = 300;
-pub static MEDIA_CACHE_TTL: usize = 3600;
-pub static SECURITY_SIG_CACHE_TTL: usize = 300;
 
 #[derive(Debug, Error)]
 pub enum CacheError {
     #[error("Redis error: {0}")]
     RedisError(#[from] redis::RedisError),
+
+    #[error("Data not found")]
+    NotFound,
 }
 
 #[derive(Clone)]
@@ -29,17 +28,43 @@ impl Cache {
     }
 
     pub async fn get_str(&self, key: &str) -> Result<String, CacheError> {
-        let mut connection = self.connection.lock().await;
-        let value: String = connection.get(key).await?;
+        match crate::ENV_CONFIG.dynamic_cache_type {
+            crate::DynamicCacheType::REDIS => {
+                let mut connection = self.connection.lock().await;
+                let value: String = connection.get(key).await?;
 
-        Ok(value)
+                Ok(value)
+            }
+            crate::DynamicCacheType::RAM => {
+                let cache = crate::RAM_CACHE.lock().await;
+                let value = cache.get_str(key);
+
+                match value {
+                    Some(value) => Ok(value.to_string()),
+                    None => Err(CacheError::NotFound),
+                }
+            }
+        }
     }
 
     pub async fn get_bytes(&self, key: &str) -> Result<Vec<u8>, CacheError> {
-        let mut connection = self.connection.lock().await;
-        let value: Vec<u8> = connection.get(key).await?;
+        match crate::ENV_CONFIG.dynamic_cache_type {
+            crate::DynamicCacheType::REDIS => {
+                let mut connection = self.connection.lock().await;
+                let value: Vec<u8> = connection.get(key).await?;
 
-        Ok(value)
+                Ok(value)
+            }
+            crate::DynamicCacheType::RAM => {
+                let cache = crate::RAM_CACHE.lock().await;
+                let value = cache.get_image(key);
+
+                match value {
+                    Some(value) => Ok(value.to_vec()),
+                    None => Err(CacheError::NotFound),
+                }
+            }
+        }
     }
 
     pub async fn set_str(
@@ -50,9 +75,17 @@ impl Cache {
     ) -> Result<(), CacheError> {
         println!("Set cache key: {key}");
 
-        let mut connection = self.connection.lock().await;
-        connection.set(key, value).await?;
-        connection.expire(key, expiration).await?; // Set the expiration time to 300 seconds (5 minutes)
+        match crate::ENV_CONFIG.dynamic_cache_type {
+            crate::DynamicCacheType::REDIS => {
+                let mut connection = self.connection.lock().await;
+                connection.set(key, value).await?;
+                connection.expire(key, expiration).await?;
+            }
+            crate::DynamicCacheType::RAM => {
+                let mut cache = crate::RAM_CACHE.lock().await;
+                cache.set_str(key, value.to_string(), expiration);
+            }
+        }
 
         Ok(())
     }
@@ -65,9 +98,17 @@ impl Cache {
     ) -> Result<(), CacheError> {
         println!("Set cache key: {key}");
 
-        let mut connection = self.connection.lock().await;
-        connection.set(key, value).await?;
-        connection.expire(key, expiration).await?; // Set the expiration time to 300 seconds (5 minutes)
+        match crate::ENV_CONFIG.dynamic_cache_type {
+            crate::DynamicCacheType::REDIS => {
+                let mut connection = self.connection.lock().await;
+                connection.set(key, value).await?;
+                connection.expire(key, expiration).await?;
+            }
+            crate::DynamicCacheType::RAM => {
+                let mut cache = crate::RAM_CACHE.lock().await;
+                cache.set_image(key, value, expiration);
+            }
+        }
 
         Ok(())
     }
@@ -80,17 +121,20 @@ pub fn normalize_file_name(url: &str) -> String {
 }
 
 pub async fn set_media_cache(file_name: &str, content: Vec<u8>, cache: &Cache) {
+    let cache_key = format!("media_media:{file_name}");
+
     use crate::MediaCacheType::*;
     match crate::ENV_CONFIG.images_cache_type.to_owned() {
         Redis => {
-            let cache_key = format!("media_media:{}", file_name);
-
             cache
-                .set_bytes(&cache_key, content, MEDIA_CACHE_TTL)
+                .set_bytes(&cache_key, content, crate::ENV_CONFIG.cache_ttl_images)
                 .await
                 .unwrap();
         }
-        RAM => todo!(),
+        RAM => {
+            let mut cache = crate::RAM_CACHE.lock().await;
+            cache.set_image(&cache_key, content, crate::ENV_CONFIG.cache_ttl_images);
+        }
         // DiskDir(folder_path) => {
         //     let mut file_path = std::path::PathBuf::from(folder_path);
         //     file_path.push(normalize_file_name(file_name));
@@ -108,11 +152,11 @@ pub async fn set_media_cache(file_name: &str, content: Vec<u8>, cache: &Cache) {
 }
 
 pub async fn get_media_cache(file_name: &str, cache: &Cache) -> Option<(Vec<u8>, String)> {
+    let cache_key = format!("media_media:{file_name}");
+
     use crate::MediaCacheType::*;
     match crate::ENV_CONFIG.images_cache_type.to_owned() {
         Redis => {
-            let cache_key = format!("media_media:{file_name}");
-
             let cache_response = cache.get_bytes(&cache_key).await;
             if let Ok(cache_response) = cache_response {
                 let mime_type = mime_guess::from_path(file_name)
@@ -128,7 +172,24 @@ pub async fn get_media_cache(file_name: &str, cache: &Cache) -> Option<(Vec<u8>,
                 None
             }
         }
-        RAM => todo!(),
+        RAM => {
+            let cache = crate::RAM_CACHE.lock().await;
+            let cache_response = cache.get_image(&cache_key);
+
+            if let Some(cache_response) = cache_response {
+                let mime_type = mime_guess::from_path(file_name)
+                    .first_or_octet_stream()
+                    .to_string();
+
+                if cache_response.is_empty() {
+                    return None;
+                }
+
+                Some((cache_response.to_vec(), mime_type))
+            } else {
+                None
+            }
+        }
         // DiskDir(folder_path) => {
         //     let mut file_path = std::path::PathBuf::from(folder_path);
         //     file_path.push(normalize_file_name(file_name));

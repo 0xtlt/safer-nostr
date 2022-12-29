@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use actix_web::{web, App, HttpServer};
+use async_lock::Mutex;
 use lazy_static::lazy_static;
 use strum::EnumString;
 use systems::cache;
@@ -33,7 +36,7 @@ pub enum RestrictedImages {
     NSFW,
 }
 
-#[derive(EnumString)]
+#[derive(EnumString, PartialEq)]
 pub enum DynamicCacheType {
     #[strum(ascii_case_insensitive)]
     REDIS,
@@ -44,6 +47,8 @@ pub enum DynamicCacheType {
 pub struct EnvConfig {
     // DYNAMIC_CACHE_TYPE = "redis" | "ram"
     pub dynamic_cache_type: DynamicCacheType,
+    // DYNAMIC_CACHE_GC_INTERVAL
+    pub dynamic_cache_gc_interval: usize,
     pub redis_url: Option<String>,
     // RAM_LIMIT_OBJECTS
     pub ram_limit_objects: usize,
@@ -63,14 +68,22 @@ pub struct EnvConfig {
     pub cache_ttl_images: usize,
     // CACHE_TTL_WEBPREVIEW
     pub cache_ttl_webpreview: usize,
+    // CACHE_TTL_SIGNATURE
+    pub cache_ttl_signature: usize,
 }
 
 lazy_static! {
+    static ref RAM_CACHE: Arc<Mutex<systems::ram_cache::RamCache>> =
+        Arc::new(Mutex::new(systems::ram_cache::RamCache::new()));
     static ref ENV_CONFIG: EnvConfig = EnvConfig {
         dynamic_cache_type: std::env::var("DYNAMIC_CACHE_TYPE")
             .unwrap_or("redis".to_string())
             .parse()
             .expect("DYNAMIC_CACHE_TYPE must be 'redis' or 'ram'"),
+        dynamic_cache_gc_interval: std::env::var("DYNAMIC_CACHE_GC_INTERVAL")
+            .unwrap_or("600".to_string())
+            .parse()
+            .expect("DYNAMIC_CACHE_GC_INTERVAL must be a number"),
         redis_url: std::env::var("REDIS_URL").ok(),
         ram_limit_objects: std::env::var("RAM_LIMIT_OBJECTS")
             .unwrap_or("100000".to_string())
@@ -112,6 +125,10 @@ lazy_static! {
             .unwrap_or("3600".to_string())
             .parse()
             .expect("CACHE_TTL_WEBPREVIEW must be a number"),
+        cache_ttl_signature: std::env::var("CACHE_TTL_SIGNATURE")
+            .unwrap_or("3600".to_string())
+            .parse()
+            .expect("CACHE_TTL_SIGNATURE must be a number"),
     };
 }
 
@@ -123,6 +140,19 @@ pub struct WebStates {
 async fn main() -> std::io::Result<()> {
     #[cfg(debug_assertions)]
     dotenv::dotenv().ok();
+
+    // Run a thread to clean the RAM cache
+    if ENV_CONFIG.dynamic_cache_type == DynamicCacheType::RAM {
+        let ram_cache = RAM_CACHE.clone();
+        tokio::spawn(async move {
+            loop {
+                {
+                    ram_cache.lock().await.gc();
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            }
+        });
+    }
 
     let cache = cache::Cache::new(&std::env::var("REDIS_URL").unwrap())
         .await

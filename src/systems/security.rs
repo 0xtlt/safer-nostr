@@ -1,4 +1,3 @@
-use super::cache::SECURITY_SIG_CACHE_TTL;
 use secp256k1::{schnorr::Signature, XOnlyPublicKey, SECP256K1};
 use std::str::FromStr;
 use thiserror::Error;
@@ -73,7 +72,7 @@ pub async fn check_access(
     let time_of_request = time.parse::<i64>().unwrap();
     let current_time = chrono::Utc::now().timestamp();
 
-    if (time_of_request - current_time).abs() > SECURITY_SIG_CACHE_TTL as i64 {
+    if (time_of_request - current_time).abs() > 300 {
         println!("Invalid time: {time}");
         return false;
     }
@@ -93,7 +92,7 @@ pub async fn check_access(
     cache
         .to_owned()
         .to_owned()
-        .set_str(&key, "1", SECURITY_SIG_CACHE_TTL)
+        .set_str(&key, "1", crate::ENV_CONFIG.cache_ttl_signature)
         .await
         .unwrap();
 

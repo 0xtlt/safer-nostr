@@ -1,8 +1,6 @@
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 
-use crate::systems::cache::DEFAULT_CACHE_TTL;
-
 #[derive(Deserialize)]
 pub struct Info {
     url: String,
@@ -22,7 +20,7 @@ pub async fn get(info: web::Query<Info>, data: web::Data<crate::WebStates>) -> i
 
             data.cache
                 .to_owned()
-                .set_str(&cache_key, &og_str, DEFAULT_CACHE_TTL)
+                .set_str(&cache_key, &og_str, crate::ENV_CONFIG.cache_ttl_webpreview)
                 .await
                 .unwrap();
             og_str

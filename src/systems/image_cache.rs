@@ -116,22 +116,6 @@ pub async fn cache_image(
     params: &Info,
     cache: &Cache,
 ) -> Result<(Vec<u8>, String), ImageCacheError> {
-    // Fetch the url
-    let client = reqwest::Client::new();
-    let response = client.get(&params.url).send().await.unwrap();
-    let body_response = response.bytes().await.unwrap();
-
-    // First size check
-    if params.width.is_some() && params.width.unwrap() > crate::ENV_CONFIG.image_max_width as f64 {
-        return Err(ImageCacheError::WidthTooLarge);
-    }
-
-    if params.height.is_some() && params.height.unwrap() > crate::ENV_CONFIG.image_max_height as f64
-    {
-        return Err(ImageCacheError::HeightTooLarge);
-    }
-
-    // Check if the body is an image
     let file_name = &format!(
         "{}-{}-{}-{}.png",
         params.url,
@@ -141,7 +125,27 @@ pub async fn cache_image(
     );
     let mut image_cache = get_media_cache(file_name, cache).await;
 
+    // Check if the body is an image
+
     if image_cache.is_none() {
+        // Fetch the url
+        let client = reqwest::Client::new();
+        let response = client.get(&params.url).send().await.unwrap();
+        let body_response = response.bytes().await.unwrap();
+
+        // First size check
+        if params.width.is_some()
+            && params.width.unwrap() > crate::ENV_CONFIG.image_max_width as f64
+        {
+            return Err(ImageCacheError::WidthTooLarge);
+        }
+
+        if params.height.is_some()
+            && params.height.unwrap() > crate::ENV_CONFIG.image_max_height as f64
+        {
+            return Err(ImageCacheError::HeightTooLarge);
+        }
+
         let image = image::load_from_memory(&body_response).unwrap();
 
         let (new_width, new_height) = params
@@ -167,7 +171,7 @@ pub async fn cache_image(
             .set_str(
                 file_name,
                 &chrono::Utc::now().timestamp().to_string(),
-                crate::systems::cache::MEDIA_CACHE_TTL,
+                crate::ENV_CONFIG.cache_ttl_images,
             )
             .await
             .unwrap();
