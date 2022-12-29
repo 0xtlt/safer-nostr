@@ -26,7 +26,7 @@ pub async fn get(info: web::Query<Info>, data: web::Data<WebStates>) -> impl Res
         Ok(response) => {
             json!({
                 "status": "success",
-                "data": response,
+                "pubkey": response,
                 "updated_at": chrono::Utc::now().timestamp()
             })
         }
