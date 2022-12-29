@@ -6,10 +6,12 @@ Safer Nostr is a service that helps protect users by loading sensitive informati
 
 - [x] Load NIP-05
 - [ ] Load website preview
-- [ ] Load and optimize images
-  - [ ] Option to store images in an S3 bucket or locally
+- [x] Load and optimize images
+  - [x] Store images in Redis
+  - [ ] Store images in S3
+  - [x] Store images in local disk
   - [ ] Artificial intelligence checks for inappropriate images
-- [ ] Configurable settings
-  - [ ] Private or public mode
-  - [ ] RAM or Redis storage options
-  - [ ] Custom cache expiration time
+- [x] Configurable settings
+  - [x] Private or public mode
+  - [x] RAM or Redis storage options
+  - [x] Custom cache expiration time
