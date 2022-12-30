@@ -157,19 +157,17 @@ async fn main() -> std::io::Result<()> {
         });
     }
 
-    let cache = cache::Cache::new(&std::env::var("REDIS_URL").unwrap())
-        .await
-        .unwrap();
+    let cache = cache::Cache::new({
+        if ENV_CONFIG.dynamic_cache_type == DynamicCacheType::REDIS {
+            Some(std::env::var("REDIS_URL").unwrap())
+        } else {
+            None
+        }
+    })
+    .await
+    .unwrap();
 
     HttpServer::new(move || {
-        let cors = Cors::default()
-            .allowed_origin("*")
-            .allowed_origin_fn(|origin, _req_head| origin.as_bytes().ends_with(b".rust-lang.org"))
-            .allowed_methods(vec!["GET", "POST"])
-            // .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-            // .allowed_header(http::header::CONTENT_TYPE)
-            .max_age(3600);
-
         App::new()
             .app_data(web::Data::new(WebStates {
                 cache: cache.clone(),

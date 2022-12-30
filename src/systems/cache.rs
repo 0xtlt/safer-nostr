@@ -14,23 +14,33 @@ pub enum CacheError {
 
 #[derive(Clone)]
 pub struct Cache {
-    pub client: redis::Client,
-    pub connection: Arc<Mutex<redis::aio::Connection>>,
+    pub client: Option<redis::Client>,
+    pub connection: Option<Arc<Mutex<redis::aio::Connection>>>,
 }
 
 impl Cache {
-    pub async fn new(redis_url: &str) -> Result<Self, CacheError> {
-        let client = redis::Client::open(redis_url)?;
-        let connection = client.get_async_connection().await?;
-        let connection = Arc::new(Mutex::new(connection));
+    pub async fn new(redis_url: Option<String>) -> Result<Self, CacheError> {
+        if let Some(redis_url) = redis_url {
+            let client = redis::Client::open(redis_url)?;
+            let connection = client.get_async_connection().await?;
+            let connection = Arc::new(Mutex::new(connection));
 
-        Ok(Self { client, connection })
+            return Ok(Self {
+                client: Some(client),
+                connection: Some(connection),
+            });
+        }
+
+        Ok(Self {
+            client: None,
+            connection: None,
+        })
     }
 
     pub async fn get_str(&self, key: &str) -> Result<String, CacheError> {
         match crate::ENV_CONFIG.dynamic_cache_type {
             crate::DynamicCacheType::REDIS => {
-                let mut connection = self.connection.lock().await;
+                let mut connection = self.connection.as_ref().unwrap().lock().await;
                 let value: String = connection.get(key).await?;
 
                 Ok(value)
@@ -50,7 +60,7 @@ impl Cache {
     pub async fn get_bytes(&self, key: &str) -> Result<Vec<u8>, CacheError> {
         match crate::ENV_CONFIG.dynamic_cache_type {
             crate::DynamicCacheType::REDIS => {
-                let mut connection = self.connection.lock().await;
+                let mut connection = self.connection.as_ref().unwrap().lock().await;
                 let value: Vec<u8> = connection.get(key).await?;
 
                 Ok(value)
@@ -77,7 +87,7 @@ impl Cache {
 
         match crate::ENV_CONFIG.dynamic_cache_type {
             crate::DynamicCacheType::REDIS => {
-                let mut connection = self.connection.lock().await;
+                let mut connection = self.connection.as_ref().unwrap().lock().await;
                 connection.set(key, value).await?;
                 connection.expire(key, expiration).await?;
             }
@@ -100,7 +110,7 @@ impl Cache {
 
         match crate::ENV_CONFIG.dynamic_cache_type {
             crate::DynamicCacheType::REDIS => {
-                let mut connection = self.connection.lock().await;
+                let mut connection = self.connection.as_ref().unwrap().lock().await;
                 connection.set(key, value).await?;
                 connection.expire(key, expiration).await?;
             }
