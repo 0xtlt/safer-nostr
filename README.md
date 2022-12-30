@@ -17,13 +17,15 @@ Safer Nostr is a service that helps protect users by loading sensitive informati
   - [ ] Artificial intelligence checks for inappropriate images
 - [x] Configurable settings
   - [x] Private or public mode
+  - [x] Private mode: Public key verification
+  - [x] Private mode: Password verification
   - [x] RAM or Redis storage options
   - [x] Custom cache expiration time
   - [ ] Bitcoin or Lightning Bitcoin payment 1 time or recurrent to be in the allowlist
 
 ## API's
 
-### For server that requires authentication
+### For server that requires authentication with public key
 
 You can only make one authenticated request with the same signature.
 
@@ -35,10 +37,25 @@ You can only make one authenticated request with the same signature.
 | sig | string | Signature of: `sha256(string: "{pubkey}:{time}:{uniq}"")` | `0ae1feeb6fb36f3f5f5d3f001b06a5f6d01c999d7a74b9227012cdac0587f1ef7b9ed4b5e16afd3f1f502266f0b3b2ed21906554d6e4ffba43de2bb99d061694` | yes |
 | sig | string | pubkey | `884704bd421721e292edbff42eb77547fe115c6ff9825b08fc366be4cd69e9f6` | yes |
 
+### For server that requires authentication with password
+
+| Parameter | Type | Description | Example | Is required? |
+| --- | --- | --- | --- | --- |
+| pass | string | Your password | `helloworld` | yes |
+
+### GET /is_good
+
+Check if the server is ok with your password / sig / nothing
+
+```ts
+type IsGoodResponse = "Yes!" | "Access Denied";
+```
+
 ### GET /nip05
 
 Example without Authentification required: `https://example.com/nip05?nip05=_@nostr.0xtlt.dev`
-Example with Authentification required: `https://example.com/nip05?nip05=_@nostr.0xtlt.dev&pubkey=884704bd421721e292edbff42eb77547fe115c6ff9825b08fc366be4cd69e9f6&uniq=20&time=1600000000&sig=0ae1feeb6fb36f3f5f5d3f001b06a5f6d01c999d7a74b9227012cdac0587f1ef7b9ed4b5e16afd3f1f502266f0b3b2ed21906554d6e4ffba43de2bb99d061694`
+Example with password Authentification required: `https://example.com/nip05?nip05=_@nostr.0xtlt.dev&pass=helloworld`
+Example with pubkey Authentification required: `https://example.com/nip05?nip05=_@nostr.0xtlt.dev&pubkey=884704bd421721e292edbff42eb77547fe115c6ff9825b08fc366be4cd69e9f6&uniq=20&time=1600000000&sig=0ae1feeb6fb36f3f5f5d3f001b06a5f6d01c999d7a74b9227012cdac0587f1ef7b9ed4b5e16afd3f1f502266f0b3b2ed21906554d6e4ffba43de2bb99d061694`
 
 | Parameter | Type | Description | Example | Is required? |
 | --- | --- | --- | --- | --- |

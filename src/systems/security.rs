@@ -47,7 +47,15 @@ pub async fn check_access(
     sig: Option<&String>,
     time: Option<&String>,
     uniq: Option<&String>,
+    pass: Option<&String>,
 ) -> bool {
+    if crate::ENV_CONFIG.password.is_some()
+        && (pass.is_none() || pass.unwrap().clone() != crate::ENV_CONFIG.password.clone().unwrap())
+    {
+        println!("Bad password");
+        return false;
+    }
+
     if crate::ENV_CONFIG.restricted_pubkeys.is_empty() {
         return true;
     }

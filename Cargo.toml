@@ -36,3 +36,4 @@ image = "0.24"
 mime_guess = "2.0.4"
 select = "0.6.0"
 strum = { version = "0.24", features = ["derive"] }
+actix-cors = "0.6.4"

@@ -4,6 +4,7 @@ use actix_web::{
     Error, HttpResponse,
 };
 use futures_util::future::LocalBoxFuture;
+use serde_json::json;
 use std::{
     future::{ready, Ready},
     rc::Rc,
@@ -58,6 +59,7 @@ where
                 search_params.get("sig"),
                 search_params.get("time"),
                 search_params.get("uniq"),
+                search_params.get("pass"),
             )
             .await
             {
@@ -66,7 +68,8 @@ where
             } else {
                 let (request, _pl) = req.into_parts();
 
-                let response = HttpResponse::Found().body("Access denied");
+                let response =
+                    HttpResponse::Found().json(json!({"status": "Access denied", "code": 0 }));
                 let res: ServiceResponse = ServiceResponse::new(request, response);
                 Ok(res)
             }

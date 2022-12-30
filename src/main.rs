@@ -1,8 +1,8 @@
-use std::sync::Arc;
-
-use actix_web::{web, App, HttpServer};
+use actix_cors::Cors;
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use async_lock::Mutex;
 use lazy_static::lazy_static;
+use std::sync::Arc;
 use strum::EnumString;
 use systems::cache;
 
@@ -60,6 +60,8 @@ pub struct EnvConfig {
     pub image_max_height: usize,
     // RESTRICTED_PUBKEYS
     pub restricted_pubkeys: Vec<String>,
+    // PASSWORD
+    pub password: Option<String>,
     // RESTRICTED_IMAGES
     pub restricted_images: Vec<RestrictedImages>,
     // CACHE_TTL_NIP05
@@ -107,6 +109,7 @@ lazy_static! {
             .map(|s| s.to_string())
             .filter(|s| !s.is_empty())
             .collect(),
+        password: std::env::var("PASSWORD").ok(),
         restricted_images: std::env::var("RESTRICTED_IMAGES")
             .unwrap_or(String::new())
             .split(',')
@@ -159,6 +162,14 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin("*")
+            .allowed_origin_fn(|origin, _req_head| origin.as_bytes().ends_with(b".rust-lang.org"))
+            .allowed_methods(vec!["GET", "POST"])
+            // .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+            // .allowed_header(http::header::CONTENT_TYPE)
+            .max_age(3600);
+
         App::new()
             .app_data(web::Data::new(WebStates {
                 cache: cache.clone(),
@@ -166,6 +177,14 @@ async fn main() -> std::io::Result<()> {
             .wrap(crate::middlewares::time_mesure::TimeMesure)
             .route("/", web::get().to(handlers::index::get))
             .wrap(crate::middlewares::validate::Validate)
+            .wrap(Logger::default())
+            .wrap(
+                Cors::default()
+                    .allowed_origin("http://localhost:8080")
+                    .allowed_methods(vec!["GET", "POST"])
+                    .max_age(3600),
+            )
+            .route("/is_good", web::get().to(handlers::verify::get))
             .route("/nip05", web::get().to(handlers::nip05::get))
             .route("/image_proxy", web::get().to(handlers::image_proxy::get))
             .route(
