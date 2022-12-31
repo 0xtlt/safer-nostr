@@ -126,9 +126,10 @@ impl Cache {
 
 // Replace all specials chars which are not compatible with file name with "_" but keep "."
 // https://hello.world -> https___hello.world
+/*
 pub fn normalize_file_name(url: &str) -> String {
     url.replace(|c: char| !c.is_ascii_alphanumeric() && c != '.', "_")
-}
+}*/
 
 pub async fn set_media_cache(file_name: &str, content: &Vec<u8>, cache: &Cache) {
     let cache_key = format!("media_media:{file_name}");
