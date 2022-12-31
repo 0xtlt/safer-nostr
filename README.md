@@ -15,7 +15,7 @@ Safer Nostr is a service that helps protect users by loading sensitive informati
   - [ ] Store images in S3
   - [ ] Store images in local disk
   - [ ] Artificial intelligence checks for inappropriate images
-- [ ] Gif compatible
+- [x] Gif compatible
 - [ ] Video compatible
 - [x] Configurable settings
   - [x] Private or public mode

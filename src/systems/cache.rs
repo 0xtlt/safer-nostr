@@ -103,7 +103,7 @@ impl Cache {
     pub async fn set_bytes(
         &self,
         key: &str,
-        value: Vec<u8>,
+        value: &Vec<u8>,
         expiration: usize,
     ) -> Result<(), CacheError> {
         println!("Set cache key: {key}");
@@ -130,7 +130,7 @@ pub fn normalize_file_name(url: &str) -> String {
     url.replace(|c: char| !c.is_ascii_alphanumeric() && c != '.', "_")
 }
 
-pub async fn set_media_cache(file_name: &str, content: Vec<u8>, cache: &Cache) {
+pub async fn set_media_cache(file_name: &str, content: &Vec<u8>, cache: &Cache) {
     let cache_key = format!("media_media:{file_name}");
 
     use crate::MediaCacheType::*;
@@ -163,21 +163,21 @@ pub async fn set_media_cache(file_name: &str, content: Vec<u8>, cache: &Cache) {
 
 pub async fn get_media_cache(file_name: &str, cache: &Cache) -> Option<(Vec<u8>, String)> {
     let cache_key = format!("media_media:{file_name}");
+    let ext_key = format!("{file_name}+ext");
 
     use crate::MediaCacheType::*;
     match crate::ENV_CONFIG.images_cache_type.to_owned() {
         Redis => {
             let cache_response = cache.get_bytes(&cache_key).await;
             if let Ok(cache_response) = cache_response {
-                let mime_type = mime_guess::from_path(file_name)
-                    .first_or_octet_stream()
-                    .to_string();
-
                 if cache_response.is_empty() {
                     return None;
                 }
 
-                Some((cache_response, mime_type))
+                Some((
+                    cache_response.to_vec(),
+                    cache.get_str(&ext_key).await.unwrap_or(String::new()),
+                ))
             } else {
                 None
             }
@@ -187,15 +187,17 @@ pub async fn get_media_cache(file_name: &str, cache: &Cache) -> Option<(Vec<u8>,
             let cache_response = cache.get_image(&cache_key);
 
             if let Some(cache_response) = cache_response {
-                let mime_type = mime_guess::from_path(file_name)
-                    .first_or_octet_stream()
-                    .to_string();
-
                 if cache_response.is_empty() {
                     return None;
                 }
 
-                Some((cache_response.to_vec(), mime_type))
+                Some((
+                    cache_response.to_vec(),
+                    cache
+                        .get_str(&ext_key)
+                        .unwrap_or(&String::new())
+                        .to_string(),
+                ))
             } else {
                 None
             }

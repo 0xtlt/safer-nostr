@@ -1,6 +1,10 @@
-use image::ImageFormat;
+use image::{AnimationDecoder, ImageFormat};
 use serde::Deserialize;
-use std::io::Cursor;
+use std::{
+    fs::File,
+    io::{Cursor, Read},
+    mem,
+};
 use thiserror::Error;
 
 use crate::systems::cache::{get_media_cache, set_media_cache};
@@ -18,10 +22,10 @@ pub enum InfoError {
 
 #[derive(Deserialize)]
 pub struct Info {
-    url: String,
-    width: Option<f64>,
-    height: Option<f64>,
-    ratio: Option<String>, // Format: "width:height"
+    pub url: String,
+    pub width: Option<f64>,
+    pub height: Option<f64>,
+    pub ratio: Option<String>, // Format: "width:height"
 }
 
 impl Info {
@@ -117,7 +121,7 @@ pub async fn cache_image(
     cache: &Cache,
 ) -> Result<(Vec<u8>, String), ImageCacheError> {
     let file_name = &format!(
-        "{}-{}-{}-{}.png",
+        "{}-{}-{}-{}",
         params.url,
         params.ratio.clone().unwrap_or(String::new()),
         params.width.unwrap_or(0.0),
@@ -159,24 +163,97 @@ pub async fn cache_image(
             return Err(ImageCacheError::SizeTooLargeAfterRatio);
         }
 
-        let image =
-            image.resize_to_fill(new_width, new_height, image::imageops::FilterType::Lanczos3);
+        // Determine the image format
+        let type_image = image::guess_format(&body_response).unwrap();
 
-        let mut cursor = Cursor::new(Vec::new());
-        image.write_to(&mut cursor, ImageFormat::Png).unwrap();
+        match type_image {
+            ImageFormat::Png => {
+                let new_png = crate::systems::images::png::run(&image, new_width, new_height);
 
-        set_media_cache(file_name, cursor.get_ref().to_vec(), cache).await;
+                set_media_cache(file_name, &new_png, cache).await;
 
-        cache
-            .set_str(
-                file_name,
-                &chrono::Utc::now().timestamp().to_string(),
-                crate::ENV_CONFIG.cache_ttl_images,
-            )
-            .await
-            .unwrap();
+                cache
+                    .set_str(
+                        &format!("{file_name}+ext"),
+                        "image/png",
+                        crate::ENV_CONFIG.cache_ttl_images,
+                    )
+                    .await
+                    .unwrap();
 
-        image_cache = get_media_cache(file_name, cache).await;
+                cache
+                    .set_str(
+                        file_name,
+                        &chrono::Utc::now().timestamp().to_string(),
+                        crate::ENV_CONFIG.cache_ttl_images,
+                    )
+                    .await
+                    .unwrap();
+
+                image_cache = get_media_cache(file_name, cache).await;
+
+                return Ok(image_cache.unwrap());
+            }
+            ImageFormat::Jpeg => {
+                let new_jpeg = crate::systems::images::jpg::run(&image, new_width, new_height);
+
+                set_media_cache(file_name, &new_jpeg, cache).await;
+
+                cache
+                    .set_str(
+                        &format!("{file_name}+ext"),
+                        "image/jpeg",
+                        crate::ENV_CONFIG.cache_ttl_images,
+                    )
+                    .await
+                    .unwrap();
+
+                cache
+                    .set_str(
+                        file_name,
+                        &chrono::Utc::now().timestamp().to_string(),
+                        crate::ENV_CONFIG.cache_ttl_images,
+                    )
+                    .await
+                    .unwrap();
+
+                image_cache = get_media_cache(file_name, cache).await;
+
+                return Ok(image_cache.unwrap());
+            }
+            ImageFormat::Gif => {
+                let new_gif = crate::systems::images::gif::run(
+                    &body_response.try_into().unwrap(),
+                    new_width,
+                    new_height,
+                );
+
+                set_media_cache(file_name, &new_gif, cache).await;
+
+                cache
+                    .set_str(
+                        &format!("{file_name}+ext"),
+                        "image/gif",
+                        crate::ENV_CONFIG.cache_ttl_images,
+                    )
+                    .await
+                    .unwrap();
+
+                cache
+                    .set_str(
+                        file_name,
+                        &chrono::Utc::now().timestamp().to_string(),
+                        crate::ENV_CONFIG.cache_ttl_images,
+                    )
+                    .await
+                    .unwrap();
+
+                image_cache = get_media_cache(file_name, cache).await;
+
+                return Ok(image_cache.unwrap());
+            }
+            _ => todo!("type_image: {:#?} not supported yet", type_image),
+        }
     }
 
     Ok(image_cache.unwrap())

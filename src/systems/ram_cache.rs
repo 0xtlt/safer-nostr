@@ -40,9 +40,9 @@ impl RamCache {
         }
     }
 
-    pub fn set_image(&mut self, key: &str, value: Vec<u8>, ttl: usize) {
+    pub fn set_image(&mut self, key: &str, value: &Vec<u8>, ttl: usize) {
         self.images
-            .insert(key.to_string(), (value, RamCache::calc_ttl(ttl)));
+            .insert(key.to_string(), (value.to_vec(), RamCache::calc_ttl(ttl)));
     }
 
     pub fn set_str(&mut self, key: &str, value: String, ttl: usize) {
