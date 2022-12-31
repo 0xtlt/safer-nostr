@@ -6,17 +6,23 @@ Safer Nostr is a service that helps protect users by loading sensitive informati
 
 - [x] Load NIP-05
 - [x] Load website preview
-- Cache non image files
+- Cache texts
   - [x] Cache in Redis
   - [x] Cache in RAM
-- [x] Load and optimize images
-  - [x] Store images in Redis
-  - [x] Store images in RAM
-  - [ ] Store images in S3
-  - [ ] Store images in local disk
+- [x] Load and optimize Medias
+  - [x] Store in Redis
+  - [x] Store in RAM
+  - [ ] Store in S3
+  - [ ] Store in local disk
   - [ ] Artificial intelligence checks for inappropriate images
-- [x] Gif compatible
-- [ ] Video compatible
+  - [ ] Artificial intelligence checks for inappropriate gifs
+  - [ ] Artificial intelligence checks for inappropriate videos
+- Formats
+  - [x] JPG
+  - [x] PNG
+  - [x] GIF
+  - [ ] MP4
+  - [ ] WEBP
 - [x] Configurable settings
   - [x] Private or public mode
   - [x] Private mode: Public key verification
