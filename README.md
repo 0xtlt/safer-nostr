@@ -22,7 +22,7 @@ Safer Nostr is a service that helps protect users by loading sensitive informati
   - [x] PNG
   - [x] GIF
   - [ ] MP4
-  - [ ] WEBP
+  - [x] WEBP
 - [x] Configurable settings
   - [x] Private or public mode
   - [x] Private mode: Public key verification

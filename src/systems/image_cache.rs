@@ -252,6 +252,33 @@ pub async fn cache_image(
 
                 return Ok(image_cache.unwrap());
             }
+            ImageFormat::WebP => {
+                let new_webp = crate::systems::images::webp::run(&image, new_width, new_height);
+
+                set_media_cache(file_name, &new_webp, cache).await;
+
+                cache
+                    .set_str(
+                        &format!("{file_name}+ext"),
+                        "image/webp",
+                        crate::ENV_CONFIG.cache_ttl_images,
+                    )
+                    .await
+                    .unwrap();
+
+                cache
+                    .set_str(
+                        file_name,
+                        &chrono::Utc::now().timestamp().to_string(),
+                        crate::ENV_CONFIG.cache_ttl_images,
+                    )
+                    .await
+                    .unwrap();
+
+                image_cache = get_media_cache(file_name, cache).await;
+
+                return Ok(image_cache.unwrap());
+            }
             _ => todo!("type_image: {:#?} not supported yet", type_image),
         }
     }
